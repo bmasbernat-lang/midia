@@ -30,6 +30,7 @@
   .item-proximo .hora{font-weight:800;color:var(--azul);font-size:24px;min-width:78px;}
   .item-proximo .qtexto{font-size:22px;font-weight:600;}
   .sin-cosas{color:var(--gris);font-size:20px;text-align:center;padding:26px 10px;}
+  .mas-cosas{color:var(--azul);font-size:19px;font-weight:700;text-align:center;padding:10px;cursor:pointer;text-decoration:underline;}
 
   .zona-boton{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:22px;}
   .boton-micro{width:210px;height:210px;border-radius:50%;background:var(--azul);color:#fff;border:none;font-size:24px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 26px rgba(21,101,192,.45);cursor:pointer;transition:transform .1s;}
@@ -160,7 +161,7 @@ const T = {
   recordatorio:"Recordatorio",guardado:"Guardado.",teRecuerdo:"Te recuerdo: ",
   hoyPal:"Hoy",mananaPal:"Mañana",alas:" a las ",ysep:" y ",estabien:". ¿Está bien?",heApuntado:"He apuntado: ",
   leeDiaBtn:"🔊 Léeme mi día",leeDiaIntro:"Hoy tienes: ",leeDiaVacio:"Hoy no tienes nada apuntado para hoy.",
-  editarTitulo:"Modificar",nuevaCosa:"➕ Añadir otra cosa"},
+  editarTitulo:"Modificar",nuevaCosa:"➕ Añadir otra cosa",masCosas:"y {n} más — toca para verlas"},
  ca:{app:"El Meu Dia",hoy:"Avui tens:",hablar:"Parla i jo<br>ho apunto",
   ayuda:"Prem el botó i digues què vols recordar. Per exemple: «dimarts tinc metge a les deu».",
   verTodas:"📋 Veure totes les meves coses",escucho:"T'escolto...",parar:"He acabat",
@@ -175,7 +176,7 @@ const T = {
   recordatorio:"Recordatori",guardado:"Desat.",teRecuerdo:"Et recordo: ",
   hoyPal:"Avui",mananaPal:"Demà",alas:" a les ",ysep:" i ",estabien:". Està bé?",heApuntado:"He apuntat: ",
   leeDiaBtn:"🔊 Llegeix-me el dia",leeDiaIntro:"Avui tens: ",leeDiaVacio:"Avui no tens res apuntat per a avui.",
-  editarTitulo:"Modificar",nuevaCosa:"➕ Afegir una altra cosa"}
+  editarTitulo:"Modificar",nuevaCosa:"➕ Afegir una altra cosa",masCosas:"i {n} més — toca per veure-les"}
 };
 
 /* ---- Nombres para MOSTRAR ---- */
@@ -483,9 +484,14 @@ function render(){
   const hoyISO=aISOFecha(hoy0());
   const cont=document.getElementById("listaProximas");
   const deHoy=eventos.filter(e=>e.fechaISO===hoyISO);
-  cont.innerHTML = deHoy.length===0
-    ? '<div class="sin-cosas">'+T[idioma].sinHoy+'</div>'
-    : deHoy.map(e=>`<div class="item-proximo"><div class="hora">${e.hora||"—"}</div><div class="qtexto">${escapar(e.titulo)}</div></div>`).join("");
+  if(deHoy.length===0){
+    cont.innerHTML='<div class="sin-cosas">'+T[idioma].sinHoy+'</div>';
+  } else {
+    let h=deHoy.slice(0,3).map(e=>`<div class="item-proximo"><div class="hora">${e.hora||"—"}</div><div class="qtexto">${escapar(e.titulo)}</div></div>`).join("");
+    if(deHoy.length>3){ h+=`<div class="mas-cosas" id="masCosas">${T[idioma].masCosas.replace("{n}",deHoy.length-3)}</div>`; }
+    cont.innerHTML=h;
+    const m=document.getElementById("masCosas"); if(m) m.onclick=()=>{ render(); mostrar("pLista"); };
+  }
   const lista=document.getElementById("listaTodas");
   const futuros=eventos.filter(e=>e.fechaISO>=hoyISO);
   if(futuros.length===0){ lista.innerHTML='<div class="sin-cosas">'+T[idioma].sinNada+'</div>'; }
