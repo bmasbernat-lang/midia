@@ -62,7 +62,9 @@
   .item-lista{background:var(--tarjeta);border-radius:16px;padding:16px 18px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;align-items:center;gap:14px;}
   .item-lista .hora{font-weight:800;color:var(--azul);font-size:22px;min-width:74px;}
   .item-lista .qtexto{flex:1;font-size:21px;font-weight:600;}
+  .btn-editar{background:none;border:none;font-size:26px;cursor:pointer;padding:4px 6px;}
   .btn-borrar{background:none;border:none;font-size:30px;color:var(--rojo);cursor:pointer;padding:4px 8px;}
+  .item-lista .qtexto{cursor:pointer;}
   .volver{margin-top:auto;}
   .aviso-tecnico{font-size:15px;color:var(--gris);text-align:center;padding:10px 16px 18px;}
   #banner{display:none;position:fixed;top:0;left:0;right:0;z-index:99;background:var(--verde);color:#fff;font-size:22px;font-weight:700;line-height:1.5;padding:22px 24px;box-shadow:0 4px 16px rgba(0,0,0,.25);cursor:pointer;text-align:center;}
@@ -157,7 +159,8 @@ const T = {
   promptVoz:"No se puede dictar por voz aquí. Escribe lo que quieres recordar:",
   recordatorio:"Recordatorio",guardado:"Guardado.",teRecuerdo:"Te recuerdo: ",
   hoyPal:"Hoy",mananaPal:"Mañana",alas:" a las ",ysep:" y ",estabien:". ¿Está bien?",heApuntado:"He apuntado: ",
-  leeDiaBtn:"🔊 Léeme mi día",leeDiaIntro:"Hoy tienes: ",leeDiaVacio:"Hoy no tienes nada apuntado para hoy."},
+  leeDiaBtn:"🔊 Léeme mi día",leeDiaIntro:"Hoy tienes: ",leeDiaVacio:"Hoy no tienes nada apuntado para hoy.",
+  editarTitulo:"Modificar",nuevaCosa:"➕ Añadir otra cosa"},
  ca:{app:"El Meu Dia",hoy:"Avui tens:",hablar:"Parla i jo<br>ho apunto",
   ayuda:"Prem el botó i digues què vols recordar. Per exemple: «dimarts tinc metge a les deu».",
   verTodas:"📋 Veure totes les meves coses",escucho:"T'escolto...",parar:"He acabat",
@@ -171,7 +174,8 @@ const T = {
   promptVoz:"Aquí no es pot dictar per veu. Escriu què vols recordar:",
   recordatorio:"Recordatori",guardado:"Desat.",teRecuerdo:"Et recordo: ",
   hoyPal:"Avui",mananaPal:"Demà",alas:" a les ",ysep:" i ",estabien:". Està bé?",heApuntado:"He apuntat: ",
-  leeDiaBtn:"🔊 Llegeix-me el dia",leeDiaIntro:"Avui tens: ",leeDiaVacio:"Avui no tens res apuntat per a avui."}
+  leeDiaBtn:"🔊 Llegeix-me el dia",leeDiaIntro:"Avui tens: ",leeDiaVacio:"Avui no tens res apuntat per a avui.",
+  editarTitulo:"Modificar",nuevaCosa:"➕ Afegir una altra cosa"}
 };
 
 /* ---- Nombres para MOSTRAR ---- */
@@ -363,7 +367,7 @@ function mejorVoz(lang){
   const any = VOICES.filter(v=>v.lang && v.lang.toLowerCase().startsWith(pref));
   return any[0] || VOICES[0] || null;
 }
-function decir(texto){
+function decirLocal(texto){
   if(!("speechSynthesis" in window)) return;
   try{
     window.speechSynthesis.cancel();
@@ -375,6 +379,25 @@ function decir(texto){
     // pequeño retardo: evita un fallo de Chrome al hablar justo después de cancelar
     setTimeout(()=>{ try{ window.speechSynthesis.resume(); window.speechSynthesis.speak(u); }catch(e){} }, 80);
   }catch(e){}
+}
+// Voz realista (ElevenLabs, a través de nuestro servidor en Vercel). Si falla, usa la del móvil.
+let audioActual=null;
+async function decir(texto){
+  try{
+    if(audioActual){ try{ audioActual.pause(); }catch(e){} audioActual=null; }
+    const r=await fetch('/api/tts',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ text:texto, lang:idioma }) });
+    if(r.ok){
+      const blob=await r.blob();
+      if(blob && blob.size>0 && String(blob.type).indexOf('audio')===0){
+        const url=URL.createObjectURL(blob);
+        audioActual=new Audio(url);
+        audioActual.onended=()=>URL.revokeObjectURL(url);
+        await audioActual.play();
+        return;
+      }
+    }
+  }catch(e){}
+  decirLocal(texto);
 }
 function banner(texto){
   const b=document.getElementById("banner");
@@ -406,7 +429,20 @@ function leerDia(){
 
 /* ---- Confirmación ---- */
 let borrador=null;
+let editandoId=null;
+function editar(id){
+  const e=eventos.find(x=>x.id===id); if(!e) return;
+  editandoId=id;
+  document.getElementById("cTitulo").value=e.titulo;
+  document.getElementById("cFecha").value=e.fechaISO;
+  document.getElementById("cHora").value=e.hora||"";
+  document.getElementById("cAviso").checked=!!e.aviso;
+  document.getElementById("tConfTitulo").textContent=T[idioma].editarTitulo;
+  mostrar("pConfirmar");
+}
 function prepararConfirmacion(texto){
+  editandoId=null;
+  document.getElementById("tConfTitulo").textContent=T[idioma].confTitulo;
   const r=interpretar(texto); borrador=r;
   document.getElementById("cTitulo").value=r.titulo;
   document.getElementById("cFecha").value=r.fechaISO;
@@ -425,10 +461,18 @@ function guardarBorrador(){
   const fechaISO=document.getElementById("cFecha").value||aISOFecha(hoy0());
   const hora=document.getElementById("cHora").value||null;
   const aviso=document.getElementById("cAviso").checked;
+  if(editandoId!=null){
+    // MODIFICAR una cita existente
+    const e=eventos.find(x=>x.id===editandoId);
+    if(e){ e.titulo=titulo; e.fechaISO=fechaISO; e.hora=hora; e.aviso=aviso; if(aviso&&hora) programarAviso(e); }
+    editandoId=null;
+    guardarTodo(); decirLocal(T[idioma].guardado); render(); mostrar("pLista");
+    return;
+  }
   const ev={id:Date.now(),titulo,fechaISO,hora,aviso};
   eventos.push(ev); guardarTodo();
   if(aviso&&hora) programarAviso(ev);
-  decir(T[idioma].guardado); render(); mostrar("pInicio");
+  decirLocal(T[idioma].guardado); render(); mostrar("pInicio");
 }
 function borrar(id){ eventos=eventos.filter(e=>e.id!==id); guardarTodo(); render(); }
 function ordenar(a,b){ if(a.fechaISO!==b.fechaISO) return a.fechaISO<b.fechaISO?-1:1; return (a.hora||"99")<(b.hora||"99")?-1:1; }
@@ -449,10 +493,11 @@ function render(){
     let html="",ultimo="";
     futuros.forEach(e=>{
       if(e.fechaISO!==ultimo){ if(ultimo!=="") html+="</div>"; html+=`<div class="dia-grupo"><div class="dia-cabecera">${fechaBonita(e.fechaISO)}</div>`; ultimo=e.fechaISO; }
-      html+=`<div class="item-lista"><div class="hora">${e.hora||"—"}</div><div class="qtexto">${escapar(e.titulo)}</div><button class="btn-borrar" data-id="${e.id}">🗑️</button></div>`;
+      html+=`<div class="item-lista"><div class="hora">${e.hora||"—"}</div><div class="qtexto" data-edit="${e.id}">${escapar(e.titulo)}</div><button class="btn-editar" data-edit="${e.id}">✏️</button><button class="btn-borrar" data-id="${e.id}">🗑️</button></div>`;
     });
     html+="</div>"; lista.innerHTML=html;
     lista.querySelectorAll(".btn-borrar").forEach(b=>{ b.onclick=()=>{ if(confirm(T[idioma].borrar)) borrar(parseInt(b.dataset.id)); }; });
+    lista.querySelectorAll("[data-edit]").forEach(b=>{ b.onclick=()=>editar(parseInt(b.dataset.edit)); });
   }
 }
 
@@ -460,7 +505,7 @@ function render(){
 function programarAviso(ev){
   if(!("Notification" in window) || Notification.permission!=="granted") return;
   const cuando=new Date(ev.fechaISO+"T"+(ev.hora||"09:00")+":00").getTime(), espera=cuando-Date.now();
-  if(espera>0 && espera<24*3600*1000){ setTimeout(()=>{ new Notification("Mi Día 🔔",{body:ev.titulo+(ev.hora?(" — "+ev.hora):"")}); decir(T[idioma].teRecuerdo+ev.titulo); }, espera); }
+  if(espera>0 && espera<24*3600*1000){ setTimeout(()=>{ new Notification("Mi Día 🔔",{body:ev.titulo+(ev.hora?(" — "+ev.hora):"")}); decirLocal(T[idioma].teRecuerdo+ev.titulo); }, espera); }
 }
 
 /* ---- Arranque ---- */
@@ -471,7 +516,7 @@ document.getElementById("btnCa").onclick=()=>cambiarIdioma("ca");
 document.getElementById("btnHablar").onclick=()=>{ if("Notification" in window && Notification.permission==="default") Notification.requestPermission(); iniciarEscucha(); };
 document.getElementById("btnPararEscucha").onclick=pararEscucha;
 document.getElementById("btnGuardar").onclick=guardarBorrador;
-document.getElementById("btnCancelarConf").onclick=()=>mostrar("pInicio");
+document.getElementById("btnCancelarConf").onclick=()=>{ const e=editandoId!=null; editandoId=null; mostrar(e?"pLista":"pInicio"); };
 document.getElementById("btnLeerDia").onclick=leerDia;
 document.getElementById("btnVerTodas").onclick=()=>{ render(); mostrar("pLista"); };
 document.getElementById("btnVolverInicio").onclick=()=>mostrar("pInicio");
