@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1565c0">
+<title>Mi Día / El Meu Dia</title>
+<style>
+  :root{
+    --azul:#1565c0;--azul-osc:#0d47a1;--verde:#2e7d32;--rojo:#c62828;
+    --fondo:#f4f7fb;--tarjeta:#ffffff;--texto:#1a1a1a;--gris:#5a6470;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--fondo);color:var(--texto);font-size:22px;line-height:1.4;display:flex;justify-content:center;}
+  #app{width:100%;max-width:520px;min-height:100%;display:flex;flex-direction:column;background:var(--fondo);position:relative;}
+  header{background:var(--azul);color:#fff;padding:18px 22px 14px;text-align:center;}
+  header h1{font-size:30px;font-weight:800;letter-spacing:.5px;}
+  header .fecha{font-size:19px;opacity:.95;margin-top:4px;text-transform:capitalize;}
+  .idioma{display:flex;gap:8px;justify-content:center;margin-top:12px;}
+  .lang-btn{background:rgba(255,255,255,.18);color:#fff;border:2px solid rgba(255,255,255,.5);border-radius:20px;padding:7px 16px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .lang-btn.activo{background:#fff;color:var(--azul);border-color:#fff;}
+
+  .pantalla{flex:1;display:none;flex-direction:column;padding:22px;}
+  .pantalla.activa{display:flex;}
+
+  .proximas{margin-bottom:14px;}
+  .proximas .titulo-seccion{font-size:19px;color:var(--gris);font-weight:700;margin-bottom:10px;}
+  .item-proximo{background:var(--tarjeta);border-radius:16px;padding:16px 18px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;align-items:center;gap:14px;}
+  .item-proximo .hora{font-weight:800;color:var(--azul);font-size:24px;min-width:78px;}
+  .item-proximo .qtexto{font-size:22px;font-weight:600;}
+  .sin-cosas{color:var(--gris);font-size:20px;text-align:center;padding:26px 10px;}
+
+  .zona-boton{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:22px;}
+  .boton-micro{width:210px;height:210px;border-radius:50%;background:var(--azul);color:#fff;border:none;font-size:24px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 26px rgba(21,101,192,.45);cursor:pointer;transition:transform .1s;}
+  .boton-micro:active{transform:scale(.96);}
+  .boton-micro .icono{font-size:70px;line-height:1;}
+  .ayuda-boton{color:var(--gris);font-size:19px;text-align:center;max-width:320px;}
+  .boton-secundario{background:none;border:3px solid var(--azul);color:var(--azul);font-size:21px;font-weight:700;border-radius:14px;padding:16px;width:100%;cursor:pointer;}
+
+  #pEscuchando{justify-content:center;align-items:center;text-align:center;gap:30px;}
+  .onda{width:180px;height:180px;border-radius:50%;background:var(--rojo);display:flex;align-items:center;justify-content:center;font-size:80px;color:#fff;animation:pulso 1.2s infinite;}
+  @keyframes pulso{0%{box-shadow:0 0 0 0 rgba(198,40,40,.5);}70%{box-shadow:0 0 0 40px rgba(198,40,40,0);}100%{box-shadow:0 0 0 0 rgba(198,40,40,0);}}
+  #textoEscucha{font-size:26px;font-weight:700;}
+  #textoParcial{font-size:22px;color:var(--gris);min-height:30px;padding:0 10px;}
+
+  .tarjeta-conf{background:var(--tarjeta);border-radius:20px;padding:24px;box-shadow:0 4px 14px rgba(0,0,0,.08);margin-bottom:22px;}
+  .campo{margin-bottom:18px;}
+  .campo label{display:block;font-size:18px;color:var(--gris);font-weight:700;margin-bottom:8px;}
+  .campo input{width:100%;font-size:23px;padding:14px;border:2px solid #cfd8e3;border-radius:12px;font-family:inherit;color:var(--texto);background:#fff;}
+  .fila-fecha{display:flex;gap:12px;}
+  .fila-fecha .campo{flex:1;margin-bottom:0;}
+  .toggle-aviso{display:flex;align-items:center;gap:12px;margin-top:20px;font-size:20px;font-weight:600;}
+  .toggle-aviso input{width:30px;height:30px;}
+  .botones-conf{display:flex;flex-direction:column;gap:14px;}
+  .btn-grande{border:none;border-radius:16px;padding:20px;font-size:23px;font-weight:800;cursor:pointer;width:100%;}
+  .btn-ok{background:var(--verde);color:#fff;}
+  .btn-cancelar{background:#e6ebf2;color:var(--gris);}
+
+  .dia-grupo{margin-bottom:20px;}
+  .dia-cabecera{font-size:20px;font-weight:800;color:var(--azul-osc);margin-bottom:10px;text-transform:capitalize;}
+  .item-lista{background:var(--tarjeta);border-radius:16px;padding:16px 18px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;align-items:center;gap:14px;}
+  .item-lista .hora{font-weight:800;color:var(--azul);font-size:22px;min-width:74px;}
+  .item-lista .qtexto{flex:1;font-size:21px;font-weight:600;}
+  .btn-borrar{background:none;border:none;font-size:30px;color:var(--rojo);cursor:pointer;padding:4px 8px;}
+  .volver{margin-top:auto;}
+  .aviso-tecnico{font-size:15px;color:var(--gris);text-align:center;padding:10px 16px 18px;}
+  #banner{display:none;position:fixed;top:0;left:0;right:0;z-index:99;background:var(--verde);color:#fff;font-size:22px;font-weight:700;line-height:1.5;padding:22px 24px;box-shadow:0 4px 16px rgba(0,0,0,.25);cursor:pointer;text-align:center;}
+  #banner::after{content:"  ✕";opacity:.8;font-size:18px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="banner"></div>
+  <header>
+    <h1 id="tApp">Mi Día</h1>
+    <div class="fecha" id="fechaHoy"></div>
+    <div class="idioma">
+      <button class="lang-btn" id="btnEs">Castellano</button>
+      <button class="lang-btn" id="btnCa">Català</button>
+    </div>
+  </header>
+
+  <!-- INICIO -->
+  <section class="pantalla activa" id="pInicio">
+    <div class="proximas">
+      <div class="titulo-seccion" id="tHoy">Hoy tienes:</div>
+      <div id="listaProximas"></div>
+    </div>
+    <div class="zona-boton">
+      <button class="boton-micro" id="btnHablar">
+        <span class="icono">🎤</span>
+        <span id="tHablar">Habla y yo<br>lo apunto</span>
+      </button>
+      <div class="ayuda-boton" id="tAyuda"></div>
+    </div>
+    <button class="boton-secundario" id="btnLeerDia" style="margin-top:20px;border-color:var(--verde);color:var(--verde);"></button>
+    <button class="boton-secundario" id="btnVerTodas" style="margin-top:12px;"></button>
+  </section>
+
+  <!-- ESCUCHANDO -->
+  <section class="pantalla" id="pEscuchando">
+    <div class="onda">👂</div>
+    <div id="textoEscucha">Te escucho...</div>
+    <div id="textoParcial"></div>
+    <button class="btn-grande btn-cancelar" id="btnPararEscucha" style="max-width:260px;"></button>
+  </section>
+
+  <!-- CONFIRMAR -->
+  <section class="pantalla" id="pConfirmar">
+    <div class="titulo-seccion" id="tConfTitulo" style="font-size:22px;font-weight:800;margin-bottom:16px;"></div>
+    <div class="tarjeta-conf">
+      <div class="campo">
+        <label id="lQue"></label>
+        <input type="text" id="cTitulo">
+      </div>
+      <div class="fila-fecha">
+        <div class="campo"><label id="lDia"></label><input type="date" id="cFecha"></div>
+        <div class="campo"><label id="lHora"></label><input type="time" id="cHora"></div>
+      </div>
+      <div class="toggle-aviso">
+        <input type="checkbox" id="cAviso" checked>
+        <label for="cAviso" id="lAviso" style="margin:0;font-size:20px;color:var(--texto);"></label>
+      </div>
+    </div>
+    <div class="botones-conf">
+      <button class="btn-grande btn-ok" id="btnGuardar"></button>
+      <button class="btn-grande btn-cancelar" id="btnCancelarConf"></button>
+    </div>
+  </section>
+
+  <!-- LISTA -->
+  <section class="pantalla" id="pLista">
+    <div class="titulo-seccion" id="tTusCosas" style="font-size:24px;font-weight:800;margin-bottom:16px;"></div>
+    <div id="listaTodas"></div>
+    <button class="boton-secundario volver" id="btnVolverInicio"></button>
+  </section>
+
+  <div class="aviso-tecnico" id="avisoTecnico"></div>
+</div>
+
+<script>
+/* ============ Mi Día / El Meu Dia — bilingüe (es/ca) ============ */
+
+/* ---- Textos de la interfaz ---- */
+const T = {
+ es:{app:"Mi Día",hoy:"Hoy tienes:",hablar:"Habla y yo<br>lo apunto",
+  ayuda:"Aprieta el botón y di lo que quieras recordar. Por ejemplo: «el martes tengo médico a las diez».",
+  verTodas:"📋 Ver todas mis cosas",escucho:"Te escucho...",parar:"He terminado",
+  confTitulo:"¿Lo he entendido bien?",lQue:"¿Qué es?",phTitulo:"Ej: Médico",lDia:"¿Qué día?",lHora:"¿A qué hora?",
+  lAviso:"🔔 Avísame a esa hora",guardar:"✅ Está bien, guárdalo",cancelar:"Cancelar",
+  tusCosas:"Tus cosas",volver:"⬅ Volver",
+  sinHoy:"No tienes nada apuntado para hoy.<br>Aprieta el botón y cuéntame algo.",
+  sinNada:"Todavía no has apuntado nada.",borrar:"¿Borrar esto?",
+  tecnicoOk:"Consejo: en el móvil, abre esto con Chrome para que el micrófono funcione.",
+  tecnicoNo:"Nota: este navegador no permite dictar por voz. Podrás escribir en su lugar.",
+  promptVoz:"No se puede dictar por voz aquí. Escribe lo que quieres recordar:",
+  recordatorio:"Recordatorio",guardado:"Guardado.",teRecuerdo:"Te recuerdo: ",
+  hoyPal:"Hoy",mananaPal:"Mañana",alas:" a las ",ysep:" y ",estabien:". ¿Está bien?",heApuntado:"He apuntado: ",
+  leeDiaBtn:"🔊 Léeme mi día",leeDiaIntro:"Hoy tienes: ",leeDiaVacio:"Hoy no tienes nada apuntado para hoy."},
+ ca:{app:"El Meu Dia",hoy:"Avui tens:",hablar:"Parla i jo<br>ho apunto",
+  ayuda:"Prem el botó i digues què vols recordar. Per exemple: «dimarts tinc metge a les deu».",
+  verTodas:"📋 Veure totes les meves coses",escucho:"T'escolto...",parar:"He acabat",
+  confTitulo:"Ho he entès bé?",lQue:"Què és?",phTitulo:"Ex: Metge",lDia:"Quin dia?",lHora:"A quina hora?",
+  lAviso:"🔔 Avisa'm a aquesta hora",guardar:"✅ Està bé, desa-ho",cancelar:"Cancel·la",
+  tusCosas:"Les teves coses",volver:"⬅ Tornar",
+  sinHoy:"No tens res apuntat per a avui.<br>Prem el botó i explica'm alguna cosa.",
+  sinNada:"Encara no has apuntat res.",borrar:"Vols esborrar això?",
+  tecnicoOk:"Consell: al mòbil, obre això amb Chrome perquè el micròfon funcioni.",
+  tecnicoNo:"Nota: aquest navegador no permet dictar per veu. Podràs escriure-ho.",
+  promptVoz:"Aquí no es pot dictar per veu. Escriu què vols recordar:",
+  recordatorio:"Recordatori",guardado:"Desat.",teRecuerdo:"Et recordo: ",
+  hoyPal:"Avui",mananaPal:"Demà",alas:" a les ",ysep:" i ",estabien:". Està bé?",heApuntado:"He apuntat: ",
+  leeDiaBtn:"🔊 Llegeix-me el dia",leeDiaIntro:"Avui tens: ",leeDiaVacio:"Avui no tens res apuntat per a avui."}
+};
+
+/* ---- Nombres para MOSTRAR ---- */
+const DIAS_DISP = {
+ es:["domingo","lunes","martes","miércoles","jueves","viernes","sábado"],
+ ca:["diumenge","dilluns","dimarts","dimecres","dijous","divendres","dissabte"]};
+const MESES_DISP = {
+ es:["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"],
+ ca:["gener","febrer","març","abril","maig","juny","juliol","agost","setembre","octubre","novembre","desembre"]};
+
+/* ---- Palabras clave para ENTENDER (es + ca juntas) ---- */
+const MESES_KW = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const MESES_KW_CA = ["gener","febrer","marc","abril","maig","juny","juliol","agost","setembre","octubre","novembre","desembre"];
+const DIAS_KW = [
+ {re:/\b(lunes|dilluns)\b/,idx:1},{re:/\b(martes|dimarts)\b/,idx:2},
+ {re:/\b(miercoles|dimecres)\b/,idx:3},{re:/\b(jueves|dijous)\b/,idx:4},
+ {re:/\b(viernes|divendres)\b/,idx:5},{re:/\b(sabado|dissabte)\b/,idx:6},
+ {re:/\b(domingo|diumenge)\b/,idx:0}];
+const NUM = {"una":1,"uno":1,"un":1,"dos":2,"dues":2,"tres":3,"cuatro":4,"quatre":4,"cinco":5,"cinc":5,"seis":6,"sis":6,"siete":7,"set":7,"ocho":8,"vuit":8,"nueve":9,"nou":9,"diez":10,"deu":10,"once":11,"onze":11,"doce":12,"dotze":12};
+
+let idioma = localStorage.getItem("miDia_idioma") || "es";
+let eventos = cargar();
+
+/* ---- Utilidades ---- */
+function quitarTildes(s){return s.normalize("NFD").replace(/[̀-ͯ]/g,"");}
+function pad(n){return String(n).padStart(2,"0");}
+function aISOFecha(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+function hoy0(){const d=new Date();d.setHours(0,0,0,0);return d;}
+
+function fechaBonita(iso){
+  const id=idioma, d=new Date(iso+"T00:00:00"), hh=hoy0();
+  const diff=Math.round((d-hh)/86400000);
+  const dia=DIAS_DISP[id][d.getDay()], mes=MESES_DISP[id][d.getMonth()];
+  const prep=(id==="ca" && /^[aeiouàè]/i.test(mes))?"d'":"de ";
+  const base=dia+", "+d.getDate()+" "+prep+mes;
+  if(diff===0) return T[id].hoyPal+" — "+base;
+  if(diff===1) return T[id].mananaPal+" — "+base;
+  return base;
+}
+
+/* ---- EL PARSER (texto -> {titulo, fechaISO, hora}) ---- */
+function interpretar(texto){
+  const original=texto.trim();
+  let t=" "+quitarTildes(original.toLowerCase())+" ";
+  const base=hoy0();
+  let fecha=new Date(base), fechaEncontrada=false;
+  const quitar=[];
+
+  // DÍA relativo
+  if(/\b(pasado\s+manana|passat\s+dema|dema\s+passat)\b/.test(t)){ fecha.setDate(base.getDate()+2); fechaEncontrada=true; quitar.push("pasado mañana","passat demà","demà passat","passat dema","dema passat"); }
+  else if(/\b(hoy|avui)\b/.test(t)){ fechaEncontrada=true; quitar.push("hoy","avui"); }
+  else if(/\b(manana|dema)\b/.test(t) && !/(de|por)\s+la\s+manana/.test(t)){ fecha.setDate(base.getDate()+1); fechaEncontrada=true; quitar.push("mañana","demà","dema"); }
+  else {
+    for(const d of DIAS_KW){
+      const m=t.match(d.re);
+      if(m){ let delta=(d.idx-base.getDay()+7)%7; if(delta===0) delta=7; fecha.setDate(base.getDate()+delta); fechaEncontrada=true; quitar.push(m[1]); break; }
+    }
+  }
+  // "el 15 de agosto" / "el 15 d'agost"
+  const mF=t.match(/\b(\d{1,2})\s+d[e'’]\s*([a-z]+)/);
+  if(mF){
+    const dia=parseInt(mF[1]);
+    let mesIdx=MESES_KW.indexOf(mF[2]); if(mesIdx<0) mesIdx=MESES_KW_CA.indexOf(mF[2]);
+    if(mesIdx>=0 && dia>=1 && dia<=31){
+      let a=base.getFullYear(), f=new Date(a,mesIdx,dia);
+      if(f<base) f=new Date(a+1,mesIdx,dia);
+      fecha=f; fechaEncontrada=true; quitar.push(mF[0]);
+    }
+  }
+
+  // HORA
+  let hora=null;
+  let mH=t.match(/a\s+l[ae]s?\s+(\d{1,2})(?:[:\.](\d{2}))?/);
+  let pH=null;
+  if(!mH){
+    for(const p in NUM){
+      const re=new RegExp("a\\s+l[ae]s?\\s+"+p+"\\b");
+      if(re.test(t)){ pH=NUM[p]; quitar.push("a las "+p,"a les "+p); break; }
+    }
+  }
+  if(mH || pH!==null){
+    let h=mH?parseInt(mH[1]):pH, min=(mH&&mH[2])?parseInt(mH[2]):0;
+    if(mH) quitar.push(mH[0]);
+    if(/\b(y\s+media|i\s+mitja)\b/.test(t)){ min=30; quitar.push("y media","i mitja"); }
+    else if(/\b(y\s+cuarto|i\s+quart)\b/.test(t)){ min=15; quitar.push("y cuarto","i quart"); }
+    else if(/\b(menos\s+cuarto|menys\s+quart)\b/.test(t)){ min=45; h=(h-1+24)%24; quitar.push("menos cuarto","menys quart"); }
+    if(/\b(de\s+la\s+tarde|por\s+la\s+tarde|de\s+la\s+tarda|a\s+la\s+tarda|a\s+la\s+tarde)\b/.test(t)){ if(h<12) h+=12; quitar.push("de la tarde","por la tarde","de la tarda","a la tarda","a la tarde"); }
+    else if(/\b(de\s+la\s+noche|por\s+la\s+noche|de\s+la\s+nit|del\s+vespre|al\s+vespre)\b/.test(t)){ if(h<12) h+=12; quitar.push("de la noche","por la noche","de la nit","del vespre","al vespre"); }
+    else if(/\b(de\s+la\s+manana|por\s+la\s+manana|del\s+mati|al\s+mati)\b/.test(t)){ quitar.push("de la mañana","por la mañana","del matí","del mati","al matí","al mati"); }
+    else if(h<=7){ h+=12; }
+    hora=pad(h%24)+":"+pad(min);
+  } else {
+    if(/\b(por\s+la\s+manana|del\s+mati|al\s+mati)\b/.test(t)){ hora="10:00"; quitar.push("por la mañana","del matí","del mati","al matí","al mati"); }
+    else if(/\b(por\s+la\s+tarde|de\s+la\s+tarda|a\s+la\s+tarda|a\s+la\s+tarde)\b/.test(t)){ hora="17:00"; quitar.push("por la tarde","de la tarda","a la tarda","a la tarde"); }
+    else if(/\b(por\s+la\s+noche|de\s+la\s+nit|del\s+vespre|al\s+vespre)\b/.test(t)){ hora="21:00"; quitar.push("por la noche","de la nit","del vespre","al vespre"); }
+    else if(/\b(mediodia|migdia)\b/.test(t)){ hora="14:00"; quitar.push("mediodía","migdia"); }
+  }
+
+  // TÍTULO
+  let titulo=original;
+  quitar.forEach(tr=>{ const re=new RegExp(tr.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"ig"); titulo=titulo.replace(re,""); });
+  const relleno=["recuerdame","recuérdame","recordam","recorda","apuntame","apúntame","apuntam","apunta","tengo que","tinc que","he de","tengo","tinc","que","el","la","los","las","les","els","a","de","del","ir","anar","una","un","por","per","con","amb","para","me toca","em toca","anota","hay que","hi ha que","vull"];
+  const colas=["el","la","los","las","les","els","a","al","de","del","con","amb","por","per","y","i","e","o","un","una","que","me","em","toca","d'","l'"];
+  const norm=w=>quitarTildes(w.toLowerCase()).replace(/['’]/g,"");
+  let palabras=titulo.split(/\s+/).filter(Boolean);
+  while(palabras.length && relleno.includes(norm(palabras[0]))) palabras.shift();
+  while(palabras.length && colas.includes(norm(palabras[palabras.length-1]))) palabras.pop();
+  titulo=palabras.join(" ").replace(/\s{2,}/g," ").replace(/^[,\s]+|[,\s]+$/g,"").trim();
+  if(titulo.length) titulo=titulo.charAt(0).toUpperCase()+titulo.slice(1);
+  if(!titulo) titulo=T[idioma].recordatorio;
+
+  if(!fechaEncontrada && hora){
+    const [hh,mm]=hora.split(":").map(Number), ahora=new Date();
+    if(hh<ahora.getHours()||(hh===ahora.getHours()&&mm<=ahora.getMinutes())) fecha.setDate(base.getDate()+1);
+  }
+  return { titulo, fechaISO:aISOFecha(fecha), hora };
+}
+
+/* ---- Almacenamiento ---- */
+function cargar(){ try{ return JSON.parse(localStorage.getItem("miDia_eventos")||"[]"); }catch(e){ return []; } }
+function guardarTodo(){ localStorage.setItem("miDia_eventos", JSON.stringify(eventos)); }
+
+/* ---- Idioma ---- */
+function aplicarIdioma(){
+  const x=T[idioma];
+  document.documentElement.lang=idioma;
+  document.getElementById("tApp").textContent=x.app;
+  document.getElementById("tHoy").textContent=x.hoy;
+  document.getElementById("tHablar").innerHTML=x.hablar;
+  document.getElementById("tAyuda").textContent=x.ayuda;
+  document.getElementById("btnVerTodas").textContent=x.verTodas;
+  document.getElementById("btnLeerDia").textContent=x.leeDiaBtn;
+  document.getElementById("textoEscucha").textContent=x.escucho;
+  document.getElementById("btnPararEscucha").textContent=x.parar;
+  document.getElementById("tConfTitulo").textContent=x.confTitulo;
+  document.getElementById("lQue").textContent=x.lQue;
+  document.getElementById("cTitulo").placeholder=x.phTitulo;
+  document.getElementById("lDia").textContent=x.lDia;
+  document.getElementById("lHora").textContent=x.lHora;
+  document.getElementById("lAviso").textContent=x.lAviso;
+  document.getElementById("btnGuardar").textContent=x.guardar;
+  document.getElementById("btnCancelarConf").textContent=x.cancelar;
+  document.getElementById("tTusCosas").textContent=x.tusCosas;
+  document.getElementById("btnVolverInicio").textContent=x.volver;
+  document.getElementById("btnEs").classList.toggle("activo",idioma==="es");
+  document.getElementById("btnCa").classList.toggle("activo",idioma==="ca");
+  document.getElementById("avisoTecnico").textContent = SR ? x.tecnicoOk : x.tecnicoNo;
+  pintarFecha(); render();
+}
+function cambiarIdioma(id){ idioma=id; localStorage.setItem("miDia_idioma",id); aplicarIdioma(); }
+
+/* ---- Navegación ---- */
+function mostrar(id){ document.querySelectorAll(".pantalla").forEach(p=>p.classList.remove("activa")); document.getElementById(id).classList.add("activa"); }
+
+/* ---- Voz: escuchar ---- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let reconocedor=null, textoFinal="";
+function iniciarEscucha(){
+  textoFinal=""; document.getElementById("textoParcial").textContent=""; mostrar("pEscuchando");
+  if(!SR){ mostrar("pInicio"); const t=prompt(T[idioma].promptVoz); if(t) prepararConfirmacion(t); return; }
+  reconocedor=new SR(); reconocedor.lang = idioma==="ca" ? "ca-ES" : "es-ES";
+  reconocedor.interimResults=true; reconocedor.continuous=false;
+  reconocedor.onresult=(e)=>{ let parcial=""; for(let i=0;i<e.results.length;i++){ if(e.results[i].isFinal) textoFinal+=e.results[i][0].transcript+" "; else parcial+=e.results[i][0].transcript; } document.getElementById("textoParcial").textContent=(textoFinal+parcial).trim(); };
+  reconocedor.onerror=()=>{};
+  reconocedor.onend=()=>{ const dicho=textoFinal.trim()||document.getElementById("textoParcial").textContent.trim(); if(dicho) prepararConfirmacion(dicho); else mostrar("pInicio"); };
+  reconocedor.start();
+}
+function pararEscucha(){ if(reconocedor){ try{reconocedor.stop();}catch(e){} } }
+
+/* ---- Voz: hablar de vuelta (elige la mejor voz instalada) ---- */
+let VOICES=[];
+function cargarVoces(){ if("speechSynthesis" in window) VOICES=window.speechSynthesis.getVoices()||[]; }
+if("speechSynthesis" in window){ cargarVoces(); window.speechSynthesis.onvoiceschanged=cargarVoces; }
+function mejorVoz(lang){
+  const pref = lang==="ca" ? "ca" : "es";
+  const buena=/(natural|enhanced|premium|neural|siri|m[oó]nica|jorge|jordi|montse|helena|paulina)/i;
+  const locales = VOICES.filter(v=>v.localService);
+  const elige = arr => arr.find(v=>buena.test(v.name)) || arr[0];
+  // 1) voz LOCAL del idioma pedido (suena sin internet)
+  let c = locales.filter(v=>v.lang && v.lang.toLowerCase().startsWith(pref));
+  if(c.length) return elige(c);
+  // 2) voz LOCAL del otro idioma (es<->ca): recambio audible aunque el acento no sea perfecto
+  const alt = pref==="ca" ? "es" : "ca";
+  c = locales.filter(v=>v.lang && v.lang.toLowerCase().startsWith(alt));
+  if(c.length) return elige(c);
+  // 3) cualquier voz local (mejor que una remota, que en archivo local se queda muda)
+  if(locales.length) return elige(locales);
+  // 4) lo que haya
+  const any = VOICES.filter(v=>v.lang && v.lang.toLowerCase().startsWith(pref));
+  return any[0] || VOICES[0] || null;
+}
+function decir(texto){
+  if(!("speechSynthesis" in window)) return;
+  try{
+    window.speechSynthesis.cancel();
+    if(!VOICES || VOICES.length===0) cargarVoces();
+    const u=new SpeechSynthesisUtterance(texto);
+    u.lang = idioma==="ca"?"ca-ES":"es-ES";
+    const v=mejorVoz(idioma); if(v){ u.voice=v; u.lang=v.lang; }
+    u.rate=0.95; u.pitch=1;
+    // pequeño retardo: evita un fallo de Chrome al hablar justo después de cancelar
+    setTimeout(()=>{ try{ window.speechSynthesis.resume(); window.speechSynthesis.speak(u); }catch(e){} }, 80);
+  }catch(e){}
+}
+function banner(texto){
+  const b=document.getElementById("banner");
+  b.textContent=texto; b.style.display="block";
+  clearTimeout(banner._t);
+  banner._t=setTimeout(()=>{ b.style.display="none"; }, 8000);
+  b.onclick=()=>{ b.style.display="none"; };
+}
+function horaHablada(hora){
+  const p=hora.split(":"), hh=parseInt(p[0]), mm=parseInt(p[1]);
+  const al=T[idioma].alas.trim();
+  let s=" "+al+" "+hh;
+  if(mm===30) s+= idioma==="ca"?" i mitja":" y media";
+  else if(mm===15) s+= idioma==="ca"?" i quart":" y cuarto";
+  else if(mm!==0) s+= (idioma==="ca"?" i ":" y ")+mm;
+  return s;
+}
+function leerDia(){
+  const hoyISO=aISOFecha(hoy0());
+  const deHoy=eventos.filter(e=>e.fechaISO===hoyISO).sort(ordenar);
+  let frase;
+  if(deHoy.length===0){ frase=T[idioma].leeDiaVacio; }
+  else{
+    frase=T[idioma].leeDiaIntro + deHoy.map(e=>{ let s=e.titulo; if(e.hora) s+=horaHablada(e.hora); return s; }).join(". ") + ".";
+  }
+  banner(frase);
+  decir(frase);
+}
+
+/* ---- Confirmación ---- */
+let borrador=null;
+function prepararConfirmacion(texto){
+  const r=interpretar(texto); borrador=r;
+  document.getElementById("cTitulo").value=r.titulo;
+  document.getElementById("cFecha").value=r.fechaISO;
+  document.getElementById("cHora").value=r.hora||"";
+  document.getElementById("cAviso").checked=true;
+  mostrar("pConfirmar");
+  let frase=T[idioma].heApuntado+r.titulo+", "+fechaBonita(r.fechaISO).replace("—",",");
+  if(r.hora) frase+=horaHablada(r.hora);
+  frase+=T[idioma].estabien;
+  decir(frase);
+}
+
+/* ---- Guardar y pintar ---- */
+function guardarBorrador(){
+  const titulo=document.getElementById("cTitulo").value.trim()||T[idioma].recordatorio;
+  const fechaISO=document.getElementById("cFecha").value||aISOFecha(hoy0());
+  const hora=document.getElementById("cHora").value||null;
+  const aviso=document.getElementById("cAviso").checked;
+  const ev={id:Date.now(),titulo,fechaISO,hora,aviso};
+  eventos.push(ev); guardarTodo();
+  if(aviso&&hora) programarAviso(ev);
+  decir(T[idioma].guardado); render(); mostrar("pInicio");
+}
+function borrar(id){ eventos=eventos.filter(e=>e.id!==id); guardarTodo(); render(); }
+function ordenar(a,b){ if(a.fechaISO!==b.fechaISO) return a.fechaISO<b.fechaISO?-1:1; return (a.hora||"99")<(b.hora||"99")?-1:1; }
+function escapar(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+function render(){
+  eventos.sort(ordenar);
+  const hoyISO=aISOFecha(hoy0());
+  const cont=document.getElementById("listaProximas");
+  const deHoy=eventos.filter(e=>e.fechaISO===hoyISO);
+  cont.innerHTML = deHoy.length===0
+    ? '<div class="sin-cosas">'+T[idioma].sinHoy+'</div>'
+    : deHoy.map(e=>`<div class="item-proximo"><div class="hora">${e.hora||"—"}</div><div class="qtexto">${escapar(e.titulo)}</div></div>`).join("");
+  const lista=document.getElementById("listaTodas");
+  const futuros=eventos.filter(e=>e.fechaISO>=hoyISO);
+  if(futuros.length===0){ lista.innerHTML='<div class="sin-cosas">'+T[idioma].sinNada+'</div>'; }
+  else{
+    let html="",ultimo="";
+    futuros.forEach(e=>{
+      if(e.fechaISO!==ultimo){ if(ultimo!=="") html+="</div>"; html+=`<div class="dia-grupo"><div class="dia-cabecera">${fechaBonita(e.fechaISO)}</div>`; ultimo=e.fechaISO; }
+      html+=`<div class="item-lista"><div class="hora">${e.hora||"—"}</div><div class="qtexto">${escapar(e.titulo)}</div><button class="btn-borrar" data-id="${e.id}">🗑️</button></div>`;
+    });
+    html+="</div>"; lista.innerHTML=html;
+    lista.querySelectorAll(".btn-borrar").forEach(b=>{ b.onclick=()=>{ if(confirm(T[idioma].borrar)) borrar(parseInt(b.dataset.id)); }; });
+  }
+}
+
+/* ---- Avisos ---- */
+function programarAviso(ev){
+  if(!("Notification" in window) || Notification.permission!=="granted") return;
+  const cuando=new Date(ev.fechaISO+"T"+(ev.hora||"09:00")+":00").getTime(), espera=cuando-Date.now();
+  if(espera>0 && espera<24*3600*1000){ setTimeout(()=>{ new Notification("Mi Día 🔔",{body:ev.titulo+(ev.hora?(" — "+ev.hora):"")}); decir(T[idioma].teRecuerdo+ev.titulo); }, espera); }
+}
+
+/* ---- Arranque ---- */
+function pintarFecha(){ const d=new Date(); document.getElementById("fechaHoy").textContent = DIAS_DISP[idioma][d.getDay()]+", "+d.getDate()+" de "+MESES_DISP[idioma][d.getMonth()]; }
+
+document.getElementById("btnEs").onclick=()=>cambiarIdioma("es");
+document.getElementById("btnCa").onclick=()=>cambiarIdioma("ca");
+document.getElementById("btnHablar").onclick=()=>{ if("Notification" in window && Notification.permission==="default") Notification.requestPermission(); iniciarEscucha(); };
+document.getElementById("btnPararEscucha").onclick=pararEscucha;
+document.getElementById("btnGuardar").onclick=guardarBorrador;
+document.getElementById("btnCancelarConf").onclick=()=>mostrar("pInicio");
+document.getElementById("btnLeerDia").onclick=leerDia;
+document.getElementById("btnVerTodas").onclick=()=>{ render(); mostrar("pLista"); };
+document.getElementById("btnVolverInicio").onclick=()=>mostrar("pInicio");
+
+aplicarIdioma();
+eventos.forEach(e=>{ if(e.aviso && e.fechaISO===aISOFecha(hoy0())) programarAviso(e); });
+</script>
+</body>
+</html>
