@@ -298,6 +298,14 @@ function interpretar(texto){
 /* ---- Almacenamiento ---- */
 function cargar(){ try{ return JSON.parse(localStorage.getItem("miDia_eventos")||"[]"); }catch(e){ return []; } }
 function guardarTodo(){ localStorage.setItem("miDia_eventos", JSON.stringify(eventos)); }
+// Borra las citas que pasaron hace más de 7 días
+function limpiarViejas(){
+  const limite=hoy0(); limite.setDate(limite.getDate()-7);
+  const limISO=aISOFecha(limite);
+  const antes=eventos.length;
+  eventos=eventos.filter(e=>e.fechaISO>=limISO);
+  if(eventos.length!==antes) guardarTodo();
+}
 
 /* ---- Idioma ---- */
 function aplicarIdioma(){
@@ -527,6 +535,7 @@ document.getElementById("btnLeerDia").onclick=leerDia;
 document.getElementById("btnVerTodas").onclick=()=>{ render(); mostrar("pLista"); };
 document.getElementById("btnVolverInicio").onclick=()=>mostrar("pInicio");
 
+limpiarViejas();
 aplicarIdioma();
 eventos.forEach(e=>{ if(e.aviso && e.fechaISO===aISOFecha(hoy0())) programarAviso(e); });
 </script>
