@@ -561,8 +561,8 @@ document.getElementById("btnVolverInicio").onclick=()=>mostrar("pInicio");
 
 limpiarViejas();
 aplicarIdioma();
-// Saludo al abrir (según la hora): escrito y, si el navegador deja, en voz
-(function(){ const s=saludoAhora(); banner(s+" 👋"); try{ decirLocal(s); }catch(e){} })();
+// Saludo hablado (voz del teléfono) la primera vez que se toca la pantalla al abrir
+document.addEventListener("pointerdown", function(){ try{ decirLocal(saludoAhora()); }catch(e){} }, { once:true });
 eventos.forEach(e=>{ if(e.aviso && e.fechaISO===aISOFecha(hoy0())) programarAviso(e); });
 </script>
 </body>
