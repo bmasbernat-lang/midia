@@ -561,8 +561,19 @@ document.getElementById("btnVolverInicio").onclick=()=>mostrar("pInicio");
 
 limpiarViejas();
 aplicarIdioma();
-// Saludo hablado (voz del teléfono) la primera vez que se toca la pantalla al abrir
-document.addEventListener("pointerdown", function(){ try{ decirLocal(saludoAhora()); }catch(e){} }, { once:true });
+// Saludo hablado (voz del teléfono) la primera vez que se toca la pantalla al abrir.
+// Se habla SÍNCRONAMENTE dentro del toque (sin retardo) para que el navegador no lo bloquee.
+document.addEventListener("pointerdown", function(){
+  try{
+    if(!("speechSynthesis" in window)) return;
+    if(!VOICES || VOICES.length===0) cargarVoces();
+    const u=new SpeechSynthesisUtterance(saludoAhora());
+    u.lang = idioma==="ca"?"ca-ES":"es-ES";
+    const v=mejorVoz(idioma); if(v){ u.voice=v; u.lang=v.lang; }
+    u.rate=0.95;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}, { once:true });
 eventos.forEach(e=>{ if(e.aviso && e.fechaISO===aISOFecha(hoy0())) programarAviso(e); });
 </script>
 </body>
