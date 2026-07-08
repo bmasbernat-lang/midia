@@ -161,7 +161,8 @@ const T = {
   recordatorio:"Recordatorio",guardado:"Guardado.",teRecuerdo:"Te recuerdo: ",
   hoyPal:"Hoy",mananaPal:"Mañana",alas:" a las ",ysep:" y ",estabien:". ¿Está bien?",heApuntado:"He apuntado: ",
   leeDiaBtn:"🔊 Léeme mi día",leeDiaIntro:"Hoy tienes: ",leeDiaVacio:"Hoy no tienes nada apuntado para hoy.",
-  editarTitulo:"Modificar",nuevaCosa:"➕ Añadir otra cosa",masCosas:"y {n} más — toca para verlas"},
+  editarTitulo:"Modificar",nuevaCosa:"➕ Añadir otra cosa",masCosas:"y {n} más — toca para verlas",
+  bDia:"Buenos días",bTarda:"Buenas tardes",bNit:"Buenas noches",enMediaHora:"Dentro de media hora: ",ahoraTxt:"Ahora: "},
  ca:{app:"El Meu Dia",hoy:"Avui tens:",hablar:"Parla i jo<br>ho apunto",
   ayuda:"Prem el botó i digues què vols recordar. Per exemple: «dimarts tinc metge a les deu».",
   verTodas:"📋 Veure totes les meves coses",escucho:"T'escolto...",parar:"He acabat",
@@ -176,7 +177,8 @@ const T = {
   recordatorio:"Recordatori",guardado:"Desat.",teRecuerdo:"Et recordo: ",
   hoyPal:"Avui",mananaPal:"Demà",alas:" a les ",ysep:" i ",estabien:". Està bé?",heApuntado:"He apuntat: ",
   leeDiaBtn:"🔊 Llegeix-me el dia",leeDiaIntro:"Avui tens: ",leeDiaVacio:"Avui no tens res apuntat per a avui.",
-  editarTitulo:"Modificar",nuevaCosa:"➕ Afegir una altra cosa",masCosas:"i {n} més — toca per veure-les"}
+  editarTitulo:"Modificar",nuevaCosa:"➕ Afegir una altra cosa",masCosas:"i {n} més — toca per veure-les",
+  bDia:"Bon dia",bTarda:"Bona tarda",bNit:"Bona nit",enMediaHora:"D'aquí a mitja hora: ",ahoraTxt:"Ara: "}
 };
 
 /* ---- Nombres para MOSTRAR ---- */
@@ -516,14 +518,36 @@ function render(){
 }
 
 /* ---- Avisos ---- */
+function beep(){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    const ctx=new AC(), o=ctx.createOscillator(), g=ctx.createGain();
+    o.connect(g); g.connect(ctx.destination); o.type="sine"; o.frequency.value=880;
+    g.gain.setValueAtTime(0.001,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.25,ctx.currentTime+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.45);
+    o.start(); o.stop(ctx.currentTime+0.5);
+  }catch(e){}
+}
+function avisar(texto){
+  beep(); banner("🔔 "+texto);
+  if("Notification" in window && Notification.permission==="granted"){ try{ new Notification("Mi Día 🔔",{body:texto}); }catch(e){} }
+  decirLocal(texto);
+}
+function programarUno(cuando, texto){
+  const espera=cuando-Date.now();
+  if(espera>0 && espera<24*3600*1000){ setTimeout(()=>avisar(texto), espera); }
+}
 function programarAviso(ev){
-  if(!("Notification" in window) || Notification.permission!=="granted") return;
-  const cuando=new Date(ev.fechaISO+"T"+(ev.hora||"09:00")+":00").getTime(), espera=cuando-Date.now();
-  if(espera>0 && espera<24*3600*1000){ setTimeout(()=>{ new Notification("Mi Día 🔔",{body:ev.titulo+(ev.hora?(" — "+ev.hora):"")}); decirLocal(T[idioma].teRecuerdo+ev.titulo); }, espera); }
+  if(!ev.hora) return;
+  const cuando=new Date(ev.fechaISO+"T"+ev.hora+":00").getTime();
+  programarUno(cuando - 30*60000, T[idioma].enMediaHora + ev.titulo); // media hora antes
+  programarUno(cuando, T[idioma].ahoraTxt + ev.titulo);               // a la hora
 }
 
 /* ---- Arranque ---- */
 function pintarFecha(){ const d=new Date(); document.getElementById("fechaHoy").textContent = DIAS_DISP[idioma][d.getDay()]+", "+d.getDate()+" de "+MESES_DISP[idioma][d.getMonth()]; }
+function saludoAhora(){ const h=new Date().getHours(); if(h>=5&&h<14) return T[idioma].bDia; if(h>=14&&h<21) return T[idioma].bTarda; return T[idioma].bNit; }
 
 document.getElementById("btnEs").onclick=()=>cambiarIdioma("es");
 document.getElementById("btnCa").onclick=()=>cambiarIdioma("ca");
@@ -537,6 +561,8 @@ document.getElementById("btnVolverInicio").onclick=()=>mostrar("pInicio");
 
 limpiarViejas();
 aplicarIdioma();
+// Saludo al abrir (según la hora): escrito y, si el navegador deja, en voz
+(function(){ const s=saludoAhora(); banner(s+" 👋"); try{ decirLocal(s); }catch(e){} })();
 eventos.forEach(e=>{ if(e.aviso && e.fechaISO===aISOFecha(hoy0())) programarAviso(e); });
 </script>
 </body>
